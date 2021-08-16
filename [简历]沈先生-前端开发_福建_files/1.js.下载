@@ -1,0 +1,151 @@
+function draw() {
+    let can_id = createCan();
+    //获取屏幕宽高
+    let cx = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
+        cy = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    let can = document.getElementById(can_id);
+    let ctx = can.getContext('2d');
+    let pointNum = 150;//产生点的数量
+    let pointRadius = 0.5;//产生的点的半径
+    let pointColor = 'rgba(158, 78, 255, 1.0)';
+    let linColorNum = '0,0,0';
+    let lineWidth = 0.3;//连接线的宽度
+    let speed = 0.8;//点的速度 速度越快 圆周围抖动感越是强烈
+    let maxLine = 120;//最大连线距离（圆的半径为maxLine,其他两点间的连线最大2*maxLine/3）
+
+    let points = [];//存放所有的点
+    can.style = 'position: fixed; top: 0px; left: 0px;z-index:-1;';
+    can.width = cx;
+    can.height = cy;
+    //生成点
+    function createPoint(num) {
+        for (let i = 0; i < num; i++) {
+            let startX = Math.random() * cx;
+            let startY = Math.random() * cy;
+
+            let beginX = (2 * Math.random() - 1) * speed;
+            let beginY = (2 * Math.random() - 1) * speed;
+            points.push({
+                startX: startX,
+                startY: startY,
+                beginX: beginX,
+                beginY: beginY,
+                changeD: true,
+                speed: 1,
+                tag: 'point'
+            });
+        }
+        //监听鼠标点击事件生成圆点
+        document.getElementsByTagName('body')[0].onmouseup = function (ev) {
+            if (points.length > pointNum) {
+                points.splice(points.length - 1, 1);
+            }
+            if (ev.target === can || ev.target === document.body) {
+                if (ev.clientX >= can.offsetLeft && ev.clientX <= (cx + can.offsetLeft) && ev.clientY >= can.offsetTop && ev.clientY <= (can.offsetTop + cy)) {
+                    points.push({
+                        startX: ev.clientX,
+                        startY: ev.clientY,
+                        beginX: 0,
+                        beginY: 0,
+                        changeD: true,
+                        speed: 1,
+                        tag: 'mouse'
+                    });
+                }
+            }
+        };
+        //监听鼠标移动事件生成圆点
+        document.getElementsByTagName('body')[0].onmousemove = function (ev) {
+            if (points.length > pointNum) {
+                points.splice(points.length - 1, 1);
+            }
+            if (ev.target === can || ev.target === document.body) {
+                if (ev.clientX >= can.offsetLeft && ev.clientX <= (cx + can.offsetLeft) && ev.clientY >= can.offsetTop && ev.clientY <= (can.offsetTop + cy)) {
+                    points.push({
+                        startX: ev.clientX,
+                        startY: ev.clientY,
+                        beginX: 0,
+                        beginY: 0,
+                        changeD: true,
+                        speed: 1,
+                        tag: 'mouse'
+                    });
+                }
+            }
+        };
+    }
+
+    //画点和线
+    function drawPoints() {
+        ctx.clearRect(0, 0, cx, cy);//清空画布
+        //循环保存点的集合
+        for (let i = 0; i < points.length; i++) {
+            //画点
+            ctx.beginPath();
+            ctx.arc(points[i].startX, points[i].startY, pointRadius, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.fillStyle = pointColor;
+            ctx.fill();
+            ctx.closePath();
+            //按指定速度移动
+            points[i].startX += (points[i].beginX * points[i].speed);
+            points[i].startY += (points[i].beginY * points[i].speed);
+            //遇到画布边界时转向
+            points[i].beginX *= points[i].startX > cx || points[i].startX < 0 ? -1 : 1;
+            points[i].beginY *= points[i].startY > cy || points[i].startY < 0 ? -1 : 1;
+            //二次循环判断各点之间是否达到连线距离
+            for (let j = i + 1; j < points.length; j++) {
+                let x = points[i].startX - points[j].startX;//两点间x轴距离
+                let y = points[i].startY - points[j].startY;//两点间y轴距离
+                let l = Math.floor(Math.sqrt(x * x + y * y));//两点之间的距离
+                if (points[j].tag === 'mouse') {
+                    if (l <= 1.3 * maxLine) {
+                        if (points[j].tag === 'mouse' && l >= maxLine) {
+                            points[i].startX -= 0.03 * x * speed;
+                            points[i].startY -= 0.03 * y * speed;
+
+                        }
+                        let w = (1.3 * maxLine - l) / (1.3 * maxLine) + 0.2;
+                        ctx.beginPath();
+                        ctx.lineWidth = lineWidth;
+                        ctx.strokeStyle = 'rgba(' + linColorNum + ',' + w + ')';
+                        ctx.moveTo(points[i].startX, points[i].startY);
+                        ctx.lineTo(points[j].startX, points[j].startY);
+                        ctx.stroke();
+                        ctx.closePath();
+
+                    }
+                } else {
+                    if (l <= maxLine / 1.5) {
+                        let w = (1.5 * maxLine - l) / (1.5 * maxLine) + 0.2;
+                        ctx.beginPath();
+                        ctx.lineWidth = lineWidth;
+                        ctx.strokeStyle = 'rgba(' + linColorNum + ',' + w + ')';
+                        ctx.moveTo(points[i].startX, points[i].startY);
+                        ctx.lineTo(points[j].startX, points[j].startY);
+                        ctx.stroke();
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+        window.requestAnimationFrame(drawPoints);
+    }
+    //生成点
+    createPoint(pointNum);
+    //生成canvas对象
+    function createCan() {
+        var can_id = 'can_' + Math.round(Math.random() * 10000000);
+        while (document.getElementById(can_id)) {
+            console.log('已存在,重新创建');
+            can_id = 'can_' + Math.round(Math.random() * 10000000);
+        }
+        let can = document.createElement('canvas');
+        let can_txt = document.createTextNode('你的浏览器不支持canvas');
+        can.setAttribute('id', can_id);
+        document.body.appendChild(can);
+        return can_id;
+    }
+    window.requestAnimationFrame(drawPoints);
+}
+window.onload = draw;
